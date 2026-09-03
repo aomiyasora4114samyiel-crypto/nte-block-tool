@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <meta name="description" content="NTE ブロック自動組み - ブラウザ内だけで動作する静的Webツール">
+  <title>NTE ブロック自動組み</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell" aria-label="NTE ブロック自動組み">
+    <section class="tool-card">
+      <header class="header-panel">
+        <h1>NTE ブロック自動組み</h1>
+        <p>端末内計算 / 外部送信なし</p>
+      </header>
+
+      <section class="board-wrap">
+        <canvas id="boardCanvas" width="500" height="500" aria-label="5×5ブロック盤面"></canvas>
+      </section>
+
+      <section class="controls-panel">
+        <div class="row gear-row">
+          <label for="gearType">ギア固有効果：</label>
+          <select id="gearType">
+            <option value="Ⅱ型">Ⅱ型</option>
+            <option value="Ⅲ型" selected>Ⅲ型</option>
+          </select>
+          <button id="calculateButton" class="calc-button" type="button">計算</button>
+        </div>
+
+        <div class="section-label">キャラ装備型：</div>
+        <div id="characterPatterns" class="character-patterns" role="group" aria-label="キャラ装備型"></div>
+
+        <div class="row equipment-row">
+          <label for="equipmentSelect">装備選択：</label>
+          <select id="equipmentSelect"></select>
+        </div>
+
+        <div class="row set-row">
+          <span class="section-label inline-label">セット効果</span>
+          <div id="setEffectBlocks" class="shape-list set-shapes" aria-label="セット効果ブロック"></div>
+        </div>
+
+        <div class="row wanted-title-row">
+          <span class="section-label inline-label">希望ブロック</span>
+          <button id="openWantedButton" class="secondary-button" type="button">設定</button>
+        </div>
+        <div id="wantedSlots" class="wanted-slots" aria-label="選択済み希望ブロック"></div>
+
+        <div id="status" class="status" aria-live="polite"></div>
+      </section>
+
+      <footer class="bottom-actions">
+        <button type="button" disabled>未実装</button>
+        <button type="button" disabled>未実装</button>
+        <button type="button" class="auto-button" disabled>ブロック<br>自動装備</button>
+      </footer>
+    </section>
+  </main>
+
+  <dialog id="wantedDialog" class="wanted-dialog">
+    <form method="dialog" class="dialog-card">
+      <div class="dialog-header">
+        <h2>[設定] 希望ブロック</h2>
+        <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
+      </div>
+      <p class="dialog-note">最大7個まで選択できます。ブロックをタップすると追加、右上の − で1個減らします。</p>
+      <div id="wantedGroups" class="wanted-groups"></div>
+      <div class="dialog-footer">
+        <span id="wantedCountText">0 / 7</span>
+        <button class="secondary-button" value="ok">閉じる</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
