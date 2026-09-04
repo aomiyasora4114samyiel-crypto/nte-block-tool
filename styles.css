@@ -75,6 +75,8 @@ button { touch-action: manipulation; }
 .equipment-row { display: grid; grid-template-columns: auto 1fr; margin-top: 7px; }
 .set-row { margin-top: 7px; align-items: center; }
 .wanted-title-row { margin-top: 10px; }
+.wanted-title-row .secondary-button { flex: 0 0 auto; }
+.ng-button { padding-inline: 14px; }
 
 label, .section-label { font-size: 18px; font-weight: 600; }
 .inline-label { flex: 0 0 auto; }
@@ -128,8 +130,8 @@ button:active:not(:disabled) { transform: translateY(1px); }
 
 .wanted-slots {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 3px;
   margin-top: 7px;
 }
 .wanted-slot {
@@ -183,6 +185,8 @@ button:active:not(:disabled) { transform: translateY(1px); }
 .wanted-group[data-count="4"] .wanted-group-items { grid-template-columns: repeat(4, 1fr); }
 .wanted-item { position: relative; min-height: 74px; display: grid; place-items: center; cursor: pointer; border: 3px solid transparent; background: transparent; border-radius: 4px; }
 .wanted-item.selected { border-color: #f00; }
+.ng-item.selected { border-color: #b0008f; }
+.ng-count-badge { background: #b0008f; color: #fff; }
 .wanted-item .shape-canvas { width: 64px; height: 64px; }
 .count-badge, .minus-badge {
   position: absolute;
@@ -214,4 +218,14 @@ button:active:not(:disabled) { transform: translateY(1px); }
   .wanted-group { grid-template-columns: 45px 1fr; }
   .wanted-group[data-count="6"] .wanted-group-items { grid-template-columns: repeat(3, 1fr); }
   .wanted-item { min-height: 64px; }
+}
+
+
+.no-solution-label {
+  color: #e60012;
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1;
+  margin-left: 4px;
+  white-space: nowrap;
 }

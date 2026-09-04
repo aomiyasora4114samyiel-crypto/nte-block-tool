@@ -92,6 +92,7 @@ const WANTED_GROUPS = [
 const state = {
   selectedCharacterIndex: 2,
   wantedSelected: [], // [groupIndex, shapeIndex]
+  ngSelected: [],     // [groupIndex, shapeIndex]  ※現在は選択UIのみ
   calculatedPlacements: []
 };
 
@@ -106,6 +107,10 @@ const wantedSlots = document.getElementById("wantedSlots");
 const wantedDialog = document.getElementById("wantedDialog");
 const wantedGroups = document.getElementById("wantedGroups");
 const wantedCountText = document.getElementById("wantedCountText");
+const ngDialog = document.getElementById("ngDialog");
+const ngGroups = document.getElementById("ngGroups");
+const ngCountText = document.getElementById("ngCountText");
+const noSolutionLabel = document.getElementById("noSolutionLabel");
 const status = document.getElementById("status");
 
 function normalizeShape(shape) {
@@ -130,8 +135,20 @@ function clearCalculation() {
   drawBoard();
 }
 
+const ALL_EQUIPMENT_VALUE = "__ALL_EQUIPMENT__";
+const EXCLUDED_EQUIPMENT = new Set(["静寂な山荘(精)"]);
+
+function availableEquipmentNames() {
+  return Object.keys(SET_EFFECT_BLOCKS).filter(name => !EXCLUDED_EQUIPMENT.has(name));
+}
+
 function renderEquipmentOptions() {
-  for (const name of Object.keys(SET_EFFECT_BLOCKS)) {
+  const allOption = document.createElement("option");
+  allOption.value = ALL_EQUIPMENT_VALUE;
+  allOption.textContent = "全検索";
+  equipmentSelect.append(allOption);
+
+  for (const name of availableEquipmentNames()) {
     const option = document.createElement("option");
     option.value = name;
     option.textContent = name;
@@ -198,6 +215,7 @@ function drawShapePreview(canvas, shape, fill) {
 
 function renderSetEffects() {
   setEffectBlocks.replaceChildren();
+  if (equipmentSelect.value === ALL_EQUIPMENT_VALUE) return;
   const shapes = SET_EFFECT_BLOCKS[equipmentSelect.value] || [];
   for (const shape of shapes) setEffectBlocks.append(createShapeCanvas(shape, COLORS.SET, 72));
 }
@@ -211,7 +229,7 @@ function wantedBlockCount(groupIndex, shapeIndex) {
 }
 
 function addWanted(groupIndex, shapeIndex) {
-  if (state.wantedSelected.length >= 7) return;
+  if (state.wantedSelected.length >= 8) return;
   state.wantedSelected.push([groupIndex, shapeIndex]);
   clearCalculation();
   renderWantedSlots();
@@ -233,7 +251,7 @@ function removeWanted(groupIndex, shapeIndex) {
 
 function renderWantedSlots() {
   wantedSlots.replaceChildren();
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 8; i++) {
     const slot = document.createElement("div");
     slot.className = "wanted-slot";
     if (i < state.wantedSelected.length) {
@@ -293,7 +311,92 @@ function renderWantedDialog() {
     groupEl.append(label, items);
     wantedGroups.append(groupEl);
   });
-  wantedCountText.textContent = `${state.wantedSelected.length} / 7`;
+  wantedCountText.textContent = `${state.wantedSelected.length} / 8`;
+}
+
+function ngBlockCount(groupIndex, shapeIndex) {
+  return state.ngSelected.filter(([g,s]) => g === groupIndex && s === shapeIndex).length;
+}
+
+function addNg(groupIndex, shapeIndex) {
+  if (state.ngSelected.length >= 8) return;
+  noSolutionLabel.hidden = true;
+  state.ngSelected.push([groupIndex, shapeIndex]);
+  clearCalculation();
+  renderNgDialog();
+}
+
+function removeNg(groupIndex, shapeIndex) {
+  noSolutionLabel.hidden = true;
+  for (let i = state.ngSelected.length - 1; i >= 0; i--) {
+    const [g,s] = state.ngSelected[i];
+    if (g === groupIndex && s === shapeIndex) {
+      state.ngSelected.splice(i, 1);
+      break;
+    }
+  }
+  clearCalculation();
+  renderNgDialog();
+}
+
+function renderNgDialog() {
+  ngGroups.replaceChildren();
+
+  WANTED_GROUPS.forEach((group, groupIndex) => {
+    const groupEl = document.createElement("section");
+    groupEl.className = "wanted-group ng-group";
+    groupEl.dataset.count = String(group.shapes.length);
+
+    const label = document.createElement("div");
+    label.className = "wanted-group-label";
+    label.textContent = group.label;
+
+    const items = document.createElement("div");
+    items.className = "wanted-group-items";
+
+    group.shapes.forEach((shape, shapeIndex) => {
+      const count = ngBlockCount(groupIndex, shapeIndex);
+      const item = document.createElement("div");
+      item.className = `wanted-item ng-item${count ? " selected" : ""}`;
+      item.tabIndex = 0;
+      item.setAttribute("role", "button");
+      item.setAttribute("aria-label", `${group.label} NGブロック ${shapeIndex+1} を追加`);
+      item.append(createShapeCanvas(shape, COLORS.FILLER, 72));
+
+      item.addEventListener("click", () => addNg(groupIndex, shapeIndex));
+      item.addEventListener("keydown", ev => {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          addNg(groupIndex, shapeIndex);
+        }
+      });
+
+      if (count) {
+        const countBadge = document.createElement("span");
+        countBadge.className = "count-badge ng-count-badge";
+        countBadge.textContent = String(count);
+        item.append(countBadge);
+
+        const minus = document.createElement("button");
+        minus.type = "button";
+        minus.className = "minus-badge";
+        minus.textContent = "−";
+        minus.setAttribute("aria-label", "1個減らす");
+        minus.addEventListener("click", ev => {
+          ev.stopPropagation();
+          removeNg(groupIndex, shapeIndex);
+        });
+        item.append(minus);
+      }
+
+      items.append(item);
+    });
+
+    groupEl.append(label, items);
+    ngGroups.append(groupEl);
+  });
+
+  ngCountText.textContent = `${state.ngSelected.length} / 8`;
 }
 
 function allBlockShapesBySize() {
@@ -332,6 +435,12 @@ function gearFillSizes(remaining) {
 function compareScore(a,b) {
   for (let i=0;i<a.length;i++) if (a[i] !== b[i]) return a[i] - b[i];
   return 0;
+}
+
+function ngShapeKeys() {
+  return new Set(
+    state.ngSelected.map(([g,s]) => shapeKey(normalizeShape(getWantedShape([g,s]))))
+  );
 }
 
 function wantedRemainingAfterSet(setShapes) {
@@ -435,71 +544,211 @@ function product(arr, repeat) {
   return out;
 }
 
-function calculateBlocks() {
-  calculateButton.disabled = true;
-  setStatus("計算中…");
-  requestAnimationFrame(() => {
-    try {
-      const setShapes = (SET_EFFECT_BLOCKS[equipmentSelect.value] || []).map(normalizeShape);
-      const unused = new Set(CHARACTER_PATTERNS[state.selectedCharacterIndex].map(([r,c]) => coordKey(r,c)));
-      const allowedSet = new Set();
-      for (let r=0;r<5;r++) for (let c=0;c<5;c++) if (!unused.has(coordKey(r,c))) allowedSet.add(coordKey(r,c));
+function calculateForEquipment(equipmentName) {
+  const setShapes = (SET_EFFECT_BLOCKS[equipmentName] || []).map(normalizeShape);
+  if (!setShapes.length) return null;
 
-      const setArea = setShapes.reduce((sum,s) => sum+s.length,0);
-      const remainingArea = allowedSet.size - setArea;
-      const fillCounts = gearFillSizes(remainingArea);
-      if (!fillCounts) throw new Error("残り枠をⅡ/Ⅲ/Ⅳ型で構成できません。");
+  // NG指定は最優先。セット効果にNG形状が含まれる装備も使用不可。
+  const ngKeysForSet = ngShapeKeys();
+  if (setShapes.some(shape => ngKeysForSet.has(shapeKey(shape)))) return null;
 
-      const {remaining: wantedRemaining, overlapIndices} = wantedRemainingAfterSet(setShapes);
-      const shapesBySize = allBlockShapesBySize();
-      const wantedBySize = {2:[],3:[],4:[]};
-      for (const shape of wantedRemaining) if (wantedBySize[shape.length]) wantedBySize[shape.length].push(shape);
+  const unused = new Set(
+    CHARACTER_PATTERNS[state.selectedCharacterIndex].map(([r,c]) => coordKey(r,c))
+  );
+  const allowedSet = new Set();
+  for (let r=0;r<5;r++) {
+    for (let c=0;c<5;c++) {
+      if (!unused.has(coordKey(r,c))) allowedSet.add(coordKey(r,c));
+    }
+  }
 
-      const perSizeOptions = [];
-      for (const n of [2,3,4]) {
-        const need = fillCounts[n];
-        const wanted = wantedBySize[n];
-        const maxTake = Math.min(need, wanted.length);
-        const options = [];
-        for (let take=maxTake; take>=0; take--) {
-          for (const inds of combinations(wanted.length, take)) {
-            const selected = inds.map(i => wanted[i]);
-            const blueCount = need - take;
-            if (blueCount === 0) options.push({selected, blue:[]});
-            else for (const blueShapes of product(shapesBySize[n], blueCount)) options.push({selected, blue:blueShapes});
+  const setArea = setShapes.reduce((sum,s) => sum+s.length,0);
+  const remainingArea = allowedSet.size - setArea;
+  const fillCounts = gearFillSizes(remainingArea);
+  if (!fillCounts) return null;
+
+  const {remaining: wantedRemaining, overlapIndices} = wantedRemainingAfterSet(setShapes);
+  const shapesBySize = allBlockShapesBySize();
+  const ngKeys = ngShapeKeys();
+
+  // NG指定された形状はフィラー候補として一切使用しない。
+  for (const n of [2,3,4]) {
+    shapesBySize[n] = shapesBySize[n].filter(shape => !ngKeys.has(shapeKey(normalizeShape(shape))));
+  }
+
+  const wantedBySize = {2:[],3:[],4:[]};
+  for (const shape of wantedRemaining) {
+    // NGは希望より優先。NG指定された形状は希望登録されていても使わない。
+    if (ngKeys.has(shapeKey(normalizeShape(shape)))) continue;
+    if (wantedBySize[shape.length]) wantedBySize[shape.length].push(shape);
+  }
+
+  const perSizeOptions = [];
+  for (const n of [2,3,4]) {
+    const need = fillCounts[n];
+    const wanted = wantedBySize[n];
+    const maxTake = Math.min(need, wanted.length);
+    const options = [];
+
+    for (let take=maxTake; take>=0; take--) {
+      for (const inds of combinations(wanted.length, take)) {
+        const selected = inds.map(i => wanted[i]);
+        const blueCount = need - take;
+
+        if (blueCount === 0) {
+          options.push({selected, blue:[]});
+        } else {
+          for (const blueShapes of product(shapesBySize[n], blueCount)) {
+            options.push({selected, blue:blueShapes});
           }
         }
-        perSizeOptions.push(options);
       }
+    }
+    perSizeOptions.push(options);
+  }
 
-      const candidates = [];
-      for (const o2 of perSizeOptions[0]) for (const o3 of perSizeOptions[1]) for (const o4 of perSizeOptions[2]) {
+  const candidates = [];
+  for (const o2 of perSizeOptions[0]) {
+    for (const o3 of perSizeOptions[1]) {
+      for (const o4 of perSizeOptions[2]) {
         const opts=[o2,o3,o4];
-        const orangeArea = opts.reduce((sum,o) => sum + o.selected.reduce((s,shape)=>s+shape.length,0),0);
-        candidates.push({orangeArea, opts});
+        const orangeArea = opts.reduce(
+          (sum,o) => sum + o.selected.reduce((s,shape)=>s+shape.length,0),
+          0
+        );
+        const orangeBlockCount = opts.reduce((sum,o) => sum + o.selected.length, 0);
+        candidates.push({orangeArea, orangeBlockCount, opts});
       }
-      candidates.sort((a,b) => b.orangeArea-a.orangeArea);
+    }
+  }
 
-      let bestArea=-1, bestSolution=null;
-      for (const candidate of candidates) {
-        if (bestSolution && candidate.orangeArea < bestArea) break;
-        const pieces = setShapes.map((shape,i) => ({shape, color: overlapIndices.has(i) ? RAINBOW : COLORS.SET}));
-        for (const opt of candidate.opts) {
-          for (const shape of opt.selected) pieces.push({shape, color:COLORS.WANTED});
-          for (const shape of opt.blue) pieces.push({shape, color:COLORS.FILLER});
+  // 個別装備の配置計算は従来どおり、希望マス数を最大化。
+  candidates.sort((a,b) =>
+    b.orangeArea - a.orangeArea ||
+    b.orangeBlockCount - a.orangeBlockCount
+  );
+
+  let bestArea=-1;
+  let bestSolution=null;
+  let bestOrangeBlockCount=0;
+
+  for (const candidate of candidates) {
+    if (bestSolution && candidate.orangeArea < bestArea) break;
+
+    const pieces = setShapes.map((shape,i) => ({
+      shape,
+      color: overlapIndices.has(i) ? RAINBOW : COLORS.SET
+    }));
+
+    for (const opt of candidate.opts) {
+      for (const shape of opt.selected) pieces.push({shape, color:COLORS.WANTED});
+      for (const shape of opt.blue) pieces.push({shape, color:COLORS.FILLER});
+    }
+
+    if (pieces.reduce((sum,p)=>sum+p.shape.length,0) !== allowedSet.size) continue;
+
+    const solution = solveExactCover(pieces, allowedSet);
+    if (solution) {
+      bestArea = candidate.orangeArea;
+      bestOrangeBlockCount = candidate.orangeBlockCount;
+      bestSolution = solution;
+      break;
+    }
+  }
+
+  if (!bestSolution) return null;
+
+  const rainbowCount = bestSolution.filter(p => p.color === RAINBOW).length;
+  const wantedBlockCount = bestOrangeBlockCount + rainbowCount;
+  const overlapArea = setShapes.reduce(
+    (sum,shape,i) => sum + (overlapIndices.has(i) ? shape.length : 0),
+    0
+  );
+
+  return {
+    equipmentName,
+    solution: bestSolution,
+    orangeArea: bestArea,
+    orangeBlockCount: bestOrangeBlockCount,
+    rainbowCount,
+    wantedBlockCount,
+    wantedAreaIncludingOverlap: bestArea + overlapArea
+  };
+}
+
+function compareAllSearchResult(a, b) {
+  // 全検索では「希望ブロック」＋「セット効果&希望ブロック」の採用枠数を最優先。
+  if (a.wantedBlockCount !== b.wantedBlockCount) {
+    return b.wantedBlockCount - a.wantedBlockCount;
+  }
+
+  // 同じ枠数なら、採用希望の総マス数が多い装備を優先。
+  if (a.wantedAreaIncludingOverlap !== b.wantedAreaIncludingOverlap) {
+    return b.wantedAreaIncludingOverlap - a.wantedAreaIncludingOverlap;
+  }
+
+  // それでも同じなら、装備リスト上で先にあるものを採用。
+  const order = availableEquipmentNames();
+  return order.indexOf(a.equipmentName) - order.indexOf(b.equipmentName);
+}
+
+function calculateBlocks() {
+  calculateButton.disabled = true;
+  noSolutionLabel.hidden = true;
+  setStatus("計算中…");
+
+  requestAnimationFrame(() => {
+    try {
+      const selectedValue = equipmentSelect.value;
+
+      if (selectedValue === ALL_EQUIPMENT_VALUE) {
+        setStatus("全装備を検索中…");
+
+        const results = [];
+        for (const equipmentName of availableEquipmentNames()) {
+          const result = calculateForEquipment(equipmentName);
+          if (result) results.push(result);
         }
-        if (pieces.reduce((sum,p)=>sum+p.shape.length,0) !== allowedSet.size) continue;
-        const solution = solveExactCover(pieces, allowedSet);
-        if (solution) { bestArea=candidate.orangeArea; bestSolution=solution; break; }
-      }
 
-      state.calculatedPlacements = bestSolution || [];
-      drawBoard();
-      if (bestSolution) {
-        const rainbowCount = bestSolution.filter(p => p.color === RAINBOW).length;
-        setStatus(`配置完了：希望採用 ${bestArea}マス / セット&希望 ${rainbowCount}個`, "ok");
+        if (!results.length) {
+          state.calculatedPlacements = [];
+          drawBoard();
+          noSolutionLabel.hidden = false;
+          setStatus("全装備を検索しましたが、完全充填できる配置が見つかりませんでした。", "error");
+          return;
+        }
+
+        results.sort(compareAllSearchResult);
+        const best = results[0];
+
+        // 最良装備へプルダウンを自動変更。
+        equipmentSelect.value = best.equipmentName;
+        renderSetEffects();
+
+        state.calculatedPlacements = best.solution;
+        drawBoard();
+
+        setStatus(
+          `全検索完了：${best.equipmentName} / 希望採用 ${best.wantedBlockCount}枠` +
+          `（希望 ${best.orangeBlockCount}個 + セット&希望 ${best.rainbowCount}個）`,
+          "ok"
+        );
       } else {
-        setStatus("この条件では20マスを完全充填できる配置が見つかりませんでした。", "error");
+        const result = calculateForEquipment(selectedValue);
+
+        if (result) {
+          state.calculatedPlacements = result.solution;
+          drawBoard();
+          setStatus(
+            `配置完了：希望採用 ${result.orangeArea}マス / セット&希望 ${result.rainbowCount}個`,
+            "ok"
+          );
+        } else {
+          state.calculatedPlacements = [];
+          drawBoard();
+          noSolutionLabel.hidden = false;
+          setStatus("この条件では20マスを完全充填できる配置が見つかりませんでした。", "error");
+        }
       }
     } catch (err) {
       console.error(err);
@@ -626,6 +875,7 @@ function init() {
   renderSetEffects();
   renderWantedSlots();
   renderWantedDialog();
+  renderNgDialog();
   drawBoard();
 
   gearType.addEventListener("change", clearCalculation);
@@ -636,6 +886,13 @@ function init() {
     if (typeof wantedDialog.showModal === "function") wantedDialog.showModal();
     else wantedDialog.setAttribute("open", "");
   });
+
+  document.getElementById("openNgButton").addEventListener("click", () => {
+    renderNgDialog();
+    if (typeof ngDialog.showModal === "function") ngDialog.showModal();
+    else ngDialog.setAttribute("open", "");
+  });
+
   window.addEventListener("resize", drawBoard, {passive:true});
 }
 

@@ -46,6 +46,8 @@
         <div class="row wanted-title-row">
           <span class="section-label inline-label">希望ブロック</span>
           <button id="openWantedButton" class="secondary-button" type="button">設定</button>
+          <button id="openNgButton" class="secondary-button ng-button" type="button">NG</button>
+          <span id="noSolutionLabel" class="no-solution-label" hidden>解なし</span>
         </div>
         <div id="wantedSlots" class="wanted-slots" aria-label="選択済み希望ブロック"></div>
 
@@ -66,10 +68,26 @@
         <h2>[設定] 希望ブロック</h2>
         <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
       </div>
-      <p class="dialog-note">最大7個まで選択できます。ブロックをタップすると追加、右上の − で1個減らします。</p>
+      <p class="dialog-note">最大8個まで選択できます。ブロックをタップすると追加、右上の − で1個減らします。</p>
       <div id="wantedGroups" class="wanted-groups"></div>
       <div class="dialog-footer">
-        <span id="wantedCountText">0 / 7</span>
+        <span id="wantedCountText">0 / 8</span>
+        <button class="secondary-button" value="ok">閉じる</button>
+      </div>
+    </form>
+  </dialog>
+
+
+  <dialog id="ngDialog" class="wanted-dialog">
+    <form method="dialog" class="dialog-card">
+      <div class="dialog-header">
+        <h2>[NG] 選択設定</h2>
+        <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
+      </div>
+      <p class="dialog-note">最大8個まで選択できます。ブロックをタップすると追加、右上の − で1個減らします。</p>
+      <div id="ngGroups" class="wanted-groups"></div>
+      <div class="dialog-footer">
+        <span id="ngCountText">0 / 8</span>
         <button class="secondary-button" value="ok">閉じる</button>
       </div>
     </form>
