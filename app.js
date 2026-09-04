@@ -548,9 +548,8 @@ function calculateForEquipment(equipmentName) {
   const setShapes = (SET_EFFECT_BLOCKS[equipmentName] || []).map(normalizeShape);
   if (!setShapes.length) return null;
 
-  // NG指定は最優先。セット効果にNG形状が含まれる装備も使用不可。
-  const ngKeysForSet = ngShapeKeys();
-  if (setShapes.some(shape => ngKeysForSet.has(shapeKey(shape)))) return null;
+  // セット効果ブロックは必須のため、NG指定されていてもセット効果分は使用する。
+  // NG判定は、この後の希望ブロック／フィラー候補にのみ適用する。
 
   const unused = new Set(
     CHARACTER_PATTERNS[state.selectedCharacterIndex].map(([r,c]) => coordKey(r,c))
